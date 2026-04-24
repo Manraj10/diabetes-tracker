@@ -34,6 +34,10 @@ class Entry(BaseModel):
     created_at: str
 
 
+EntryCreate.model_rebuild()
+Entry.model_rebuild()
+
+
 def get_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(DB_PATH)
     connection.row_factory = sqlite3.Row
