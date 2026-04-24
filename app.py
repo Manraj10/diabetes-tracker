@@ -132,3 +132,38 @@ def summary_today() -> dict[str, Optional[float]]:
         "min_glucose": row["min_glucose"],
         "max_glucose": row["max_glucose"],
     }
+
+
+@app.get("/summary/recent")
+def summary_recent(days: int = 7) -> dict[str, object]:
+    safe_days = max(1, min(days, 30))
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                substr(created_at, 1, 10) AS entry_date,
+                COUNT(*) AS total_entries,
+                AVG(glucose) AS average_glucose,
+                MIN(glucose) AS min_glucose,
+                MAX(glucose) AS max_glucose
+            FROM entries
+            GROUP BY substr(created_at, 1, 10)
+            ORDER BY entry_date DESC
+            LIMIT ?
+            """,
+            (safe_days,),
+        ).fetchall()
+
+    return {
+        "days_requested": safe_days,
+        "daily_summaries": [
+            {
+                "date": row["entry_date"],
+                "total_entries": row["total_entries"],
+                "average_glucose": round(row["average_glucose"], 2),
+                "min_glucose": row["min_glucose"],
+                "max_glucose": row["max_glucose"],
+            }
+            for row in rows
+        ],
+    }

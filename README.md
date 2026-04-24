@@ -1,45 +1,58 @@
 # Diabetes Tracker
 
-A lightweight health-tracking app for logging glucose readings, meals, exercise, and notes. This project is designed as a portfolio-friendly example of building a simple backend system with Python, FastAPI, and SQLite.
+A small FastAPI backend for logging glucose readings, meals, exercise, and notes. The project focuses on building a clean local health-data workflow with persistent storage and simple summaries.
 
-## Why this project matters
+## Overview
 
-This project shows how software can support practical everyday decisions through:
+The app stores entries in SQLite and exposes endpoints for:
 
-- structured data collection
-- trend visibility over time
-- simple API design
-- lightweight persistence with SQLite
+- logging readings
+- listing recent entries
+- viewing same-day summaries
+- viewing recent daily trend summaries
 
-## Tech stack
+## Built with
 
 - Python
 - FastAPI
 - SQLite
 
-## Features
+## What it does
 
-- add glucose entries with notes, meals, exercise, and timestamps
-- list recent entries
-- get a quick daily summary with average, min, and max glucose values
-- store data locally in SQLite
+- saves glucose entries with timestamps
+- records optional meal and exercise context
+- returns recent history
+- calculates min, max, and average glucose values
+- groups recent readings into daily summaries
 
-## Run locally
+## API
+
+### `POST /entries`
+Create a new glucose entry.
+
+### `GET /entries`
+Return the most recent entries.
+
+### `GET /summary/today`
+Return a summary for the current day.
+
+### `GET /summary/recent?days=7`
+Return grouped daily summaries for the most recent days with recorded data.
+
+## Running locally
 
 ```bash
 pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
-Then open:
+Interactive docs:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-## Example API flow
-
-Create an entry:
+## Example request
 
 ```bash
 curl -X POST http://127.0.0.1:8000/entries ^
@@ -47,18 +60,6 @@ curl -X POST http://127.0.0.1:8000/entries ^
   -d "{\"glucose\":118,\"meal\":\"Lunch\",\"exercise_minutes\":30,\"notes\":\"Post-walk reading\"}"
 ```
 
-List entries:
+## Notes
 
-```bash
-curl http://127.0.0.1:8000/entries
-```
-
-Daily summary:
-
-```bash
-curl http://127.0.0.1:8000/summary/today
-```
-
-## Resume-ready description
-
-Built a Python and FastAPI health-tracking application that stores glucose readings and daily activity data in SQLite, exposing API endpoints for data logging, history retrieval, and summary insights.
+This project is intentionally lightweight and local-first. It is designed to show backend structure, persistence, and summary logic without needing external services.
