@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 import sqlite3
 from contextlib import closing
 from datetime import datetime
@@ -7,10 +9,13 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 
-DB_PATH = Path(__file__).with_name("diabetes_tracker.db")
+BASE_DIR = Path(__file__).parent
+DB_PATH = BASE_DIR / "diabetes_tracker.db"
+INDEX_HTML = BASE_DIR / "index.html"
 
 
 class EntryCreate(BaseModel):
@@ -52,7 +57,7 @@ def init_db() -> None:
         connection.commit()
 
 
-app = FastAPI(title="Diabetes Tracker API", version="1.0.0")
+app = FastAPI(title="Diabetes Tracker API", version="2.0.0")
 
 
 @app.on_event("startup")
@@ -60,12 +65,17 @@ def startup() -> None:
     init_db()
 
 
-@app.get("/")
-def root() -> dict[str, str]:
-    return {"message": "Diabetes Tracker API is running"}
+@app.get("/", response_class=HTMLResponse)
+def home() -> str:
+    return INDEX_HTML.read_text(encoding="utf-8")
 
 
-@app.post("/entries", response_model=Entry, status_code=201)
+@app.get("/api/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/api/entries", response_model=Entry, status_code=201)
 def create_entry(entry: EntryCreate) -> Entry:
     created_at = datetime.now().isoformat(timespec="seconds")
     with closing(get_connection()) as connection:
@@ -78,7 +88,6 @@ def create_entry(entry: EntryCreate) -> Entry:
         )
         connection.commit()
         entry_id = cursor.lastrowid
-
         row = connection.execute(
             "SELECT id, glucose, meal, exercise_minutes, notes, created_at FROM entries WHERE id = ?",
             (entry_id,),
@@ -87,7 +96,7 @@ def create_entry(entry: EntryCreate) -> Entry:
     return Entry(**dict(row))
 
 
-@app.get("/entries", response_model=list[Entry])
+@app.get("/api/entries", response_model=list[Entry])
 def list_entries(limit: int = 20) -> list[Entry]:
     safe_limit = max(1, min(limit, 100))
     with closing(get_connection()) as connection:
@@ -100,11 +109,10 @@ def list_entries(limit: int = 20) -> list[Entry]:
             """,
             (safe_limit,),
         ).fetchall()
-
     return [Entry(**dict(row)) for row in rows]
 
 
-@app.get("/summary/today")
+@app.get("/api/summary/today")
 def summary_today() -> dict[str, Optional[float]]:
     today_prefix = datetime.now().date().isoformat()
     with closing(get_connection()) as connection:
@@ -134,7 +142,7 @@ def summary_today() -> dict[str, Optional[float]]:
     }
 
 
-@app.get("/summary/recent")
+@app.get("/api/summary/recent")
 def summary_recent(days: int = 7) -> dict[str, object]:
     safe_days = max(1, min(days, 30))
     with closing(get_connection()) as connection:
@@ -167,3 +175,37 @@ def summary_recent(days: int = 7) -> dict[str, object]:
             for row in rows
         ],
     }
+
+
+@app.get("/api/export/csv")
+def export_csv() -> StreamingResponse:
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT id, glucose, meal, exercise_minutes, notes, created_at
+            FROM entries
+            ORDER BY created_at DESC
+            """
+        ).fetchall()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["id", "glucose", "meal", "exercise_minutes", "notes", "created_at"])
+    for row in rows:
+        writer.writerow(
+            [
+                row["id"],
+                row["glucose"],
+                row["meal"],
+                row["exercise_minutes"],
+                row["notes"],
+                row["created_at"],
+            ]
+        )
+    buffer.seek(0)
+
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=diabetes-tracker-export.csv"},
+    )

@@ -1,43 +1,50 @@
 # Diabetes Tracker
 
-A small FastAPI backend for logging glucose readings, meals, exercise, and notes. The project focuses on building a clean local health-data workflow with persistent storage and simple summaries.
+A local-first health tracking app with a FastAPI backend, SQLite storage, and a simple browser dashboard. The project focuses on turning raw daily entries into something easier to review over time.
 
 ## Overview
 
-The app stores entries in SQLite and exposes endpoints for:
+The app supports:
 
-- logging readings
-- listing recent entries
-- viewing same-day summaries
-- viewing recent daily trend summaries
+- logging glucose readings with context
+- tracking recent history
+- summarizing daily averages and ranges
+- exporting the data to CSV
+- viewing trends in a lightweight frontend dashboard
 
 ## Built with
 
 - Python
 - FastAPI
 - SQLite
+- HTML
+- JavaScript
 
-## What it does
+## Features
 
-- saves glucose entries with timestamps
-- records optional meal and exercise context
-- returns recent history
-- calculates min, max, and average glucose values
-- groups recent readings into daily summaries
+- save glucose entries with meal and exercise context
+- list recent records
+- compute same-day summary stats
+- group recent data into daily trend summaries
+- export recorded entries as CSV
+- use a browser dashboard for quick review
 
 ## API
 
-### `POST /entries`
+### `POST /api/entries`
 Create a new glucose entry.
 
-### `GET /entries`
-Return the most recent entries.
+### `GET /api/entries`
+Return recent entries.
 
-### `GET /summary/today`
-Return a summary for the current day.
+### `GET /api/summary/today`
+Return summary stats for the current day.
 
-### `GET /summary/recent?days=7`
-Return grouped daily summaries for the most recent days with recorded data.
+### `GET /api/summary/recent?days=7`
+Return grouped daily summaries.
+
+### `GET /api/export/csv`
+Export all tracked entries as CSV.
 
 ## Running locally
 
@@ -46,20 +53,18 @@ pip install -r requirements.txt
 uvicorn app:app --reload
 ```
 
+Open the app:
+
+```text
+http://127.0.0.1:8000/
+```
+
 Interactive docs:
 
 ```text
 http://127.0.0.1:8000/docs
 ```
 
-## Example request
-
-```bash
-curl -X POST http://127.0.0.1:8000/entries ^
-  -H "Content-Type: application/json" ^
-  -d "{\"glucose\":118,\"meal\":\"Lunch\",\"exercise_minutes\":30,\"notes\":\"Post-walk reading\"}"
-```
-
 ## Notes
 
-This project is intentionally lightweight and local-first. It is designed to show backend structure, persistence, and summary logic without needing external services.
+This project keeps everything local and lightweight. It is meant to show a practical full-stack workflow rather than depend on hosted databases or external services.
