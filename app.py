@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+import os
 import sqlite3
 from contextlib import closing
 from datetime import datetime
@@ -14,7 +15,8 @@ from pydantic import BaseModel, Field
 
 
 BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / "diabetes_tracker.db"
+# Vercel serverless functions can only write to /tmp at runtime.
+DB_PATH = Path("/tmp/diabetes_tracker.db") if os.getenv("VERCEL") else BASE_DIR / "diabetes_tracker.db"
 INDEX_HTML = BASE_DIR / "index.html"
 
 
