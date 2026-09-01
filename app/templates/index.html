@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diabetes Tracker</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main>
+      <p class="muted">Diabetes Tracker</p>
+      <h1>Log readings and track daily trends.</h1>
+      <div class="layout">
+        <section class="card">
+          <h2>New entry</h2>
+          <label>Glucose</label>
+          <input id="glucose" type="number" min="40" max="500" value="110" />
+
+          <label>Meal</label>
+          <input
+            id="meal"
+            type="text"
+            placeholder="Breakfast, Lunch, Snack..."
+          />
+
+          <label>Exercise minutes</label>
+          <input id="exercise" type="number" min="0" max="600" value="0" />
+
+          <label>Notes</label>
+          <textarea id="notes" placeholder="Optional notes"></textarea>
+
+          <button id="saveButton">Save entry</button>
+          <a href="/api/export/csv" style="display: block; margin-top: 12px">
+            Export CSV
+          </a>
+          <p id="status" class="muted"></p>
+        </section>
+
+        <section class="card">
+          <div class="toolbar">
+            <div>
+              <h2 style="margin-bottom: 4px">Dashboard</h2>
+              <p class="muted" style="margin-top: 0">
+                Today summary plus recent trend view
+              </p>
+            </div>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-box">
+              <div class="muted">Entries today</div>
+              <strong id="entriesToday">-</strong>
+            </div>
+
+            <div class="summary-box">
+              <div class="muted">Average</div>
+              <strong id="avgToday">-</strong>
+            </div>
+
+            <div class="summary-box">
+              <div class="muted">Min</div>
+              <strong id="minToday">-</strong>
+            </div>
+
+            <div class="summary-box">
+              <div class="muted">Max</div>
+              <strong id="maxToday">-</strong>
+            </div>
+          </div>
+
+          <div class="bars" id="trendBars"></div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Glucose</th>
+                <th>Meal</th>
+                <th>Exercise</th>
+              </tr>
+            </thead>
+            <tbody id="entriesTable"></tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      async function loadDashboard() {
+        const entriesRes = await fetch("/api/entries");
+        const entries = await entriesRes.json();
+
+        const summaryRes = await fetch("/api/summary/recent?days=7");
+        const summary = await summaryRes.json();
+
+        const todayRes = await fetch("/api/summary/today");
+        const today = todayRes.ok ? await todayRes.json() : null;
+
+        document.getElementById("entriesToday").textContent = today
+          ? today.total_entries
+          : 0;
+
+        document.getElementById("avgToday").textContent = today
+          ? today.average_glucose
+          : "-";
+
+        document.getElementById("minToday").textContent = today
+          ? today.min_glucose
+          : "-";
+
+        document.getElementById("maxToday").textContent = today
+          ? today.max_glucose
+          : "-";
+
+        document.getElementById("entriesTable").innerHTML = entries
+          .map(
+            (entry) => `
+              <tr>
+                <td>${entry.created_at.replace("T", " ")}</td>
+                <td>${entry.glucose}</td>
+                <td>${entry.meal || "-"}</td>
+                <td>${entry.exercise_minutes} min</td>
+              </tr>
+            `,
+          )
+          .join("");
+
+        const bars = summary.daily_summaries.slice().reverse();
+
+        document.getElementById("trendBars").innerHTML = bars
+          .map((day) => {
+            const height = Math.max(
+              20,
+              Math.min(180, day.average_glucose),
+            );
+
+            return `
+              <div class="bar-wrap">
+                <div class="bar" style="height:${height}px;"></div>
+                <div>${day.average_glucose}</div>
+                <div class="muted">${day.date.slice(5)}</div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      async function saveEntry() {
+        const payload = {
+          glucose: Number(document.getElementById("glucose").value),
+          meal: document.getElementById("meal").value || null,
+          exercise_minutes: Number(
+            document.getElementById("exercise").value || 0,
+          ),
+          notes: document.getElementById("notes").value || null,
+        };
+
+        const response = await fetch("/api/entries", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const status = document.getElementById("status");
+
+        if (!response.ok) {
+          status.textContent = "Could not save the entry.";
+          return;
+        }
+
+        status.textContent = "Entry saved.";
+        document.getElementById("meal").value = "";
+        document.getElementById("notes").value = "";
+        document.getElementById("exercise").value = "0";
+
+        await loadDashboard();
+      }
+
+      document
+        .getElementById("saveButton")
+        .addEventListener("click", saveEntry);
+
+      loadDashboard();
+    </script>
+  </body>
+</html>
