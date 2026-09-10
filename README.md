@@ -2,6 +2,11 @@
 
 A local-first health tracking app with a FastAPI backend, SQLite storage, and a simple browser dashboard. The project focuses on turning raw daily entries into something easier to review over time.
 
+## How to Run:
+
+From the root dircectory run:
+`uvicorn app.main:app --reload`
+
 ## Overview
 
 The app supports:
@@ -32,18 +37,23 @@ The app supports:
 ## API
 
 ### `POST /api/entries`
+
 Create a new glucose entry.
 
 ### `GET /api/entries`
+
 Return recent entries.
 
 ### `GET /api/summary/today`
+
 Return summary stats for the current day.
 
 ### `GET /api/summary/recent?days=7`
+
 Return grouped daily summaries.
 
 ### `GET /api/export/csv`
+
 Export all tracked entries as CSV.
 
 ## Running locally
